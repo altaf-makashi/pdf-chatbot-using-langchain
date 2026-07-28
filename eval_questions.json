@@ -1,0 +1,27 @@
+[
+  {
+    "question": "When and where was APJ Abdul Kalam born?",
+    "expected_page": 1,
+    "should_answer": true
+  },
+  {
+    "question": "What was Kalam's role at ISRO?",
+    "expected_page": 2,
+    "should_answer": true
+  },
+  {
+    "question": "What major awards did Kalam receive?",
+    "expected_page": 4,
+    "should_answer": true
+  },
+  {
+    "question": "who is altaf",
+    "expected_page": null,
+    "should_answer": false
+  },
+  {
+    "question": "What is the capital of France?",
+    "expected_page": null,
+    "should_answer": false
+  }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "question": "When and where was APJ Abdul Kalam born?",
+    "ground_truth": "APJ Abdul Kalam was born on 15 October 1931 in Rameswaram, in the former Madras Presidency."
+  },
+  {
+    "question": "What was Kalam's family background like?",
+    "ground_truth": "Kalam was born into a Tamil Muslim family of modest means. His father, Jainulabdeen, owned a boat and served as the imam of a local mosque, while his mother, Ashiamma, was a homemaker. He was the youngest of five children. The family faced financial hardship after the opening of the Pamban Bridge disrupted their traditional business, and Kalam sold newspapers to help support the household."
+  },
+  {
+    "question": "What did Kalam study and where?",
+    "ground_truth": "Kalam graduated with a degree in physics from St. Joseph's College, Tiruchirappalli in 1954, then moved to Madras in 1955 to study aerospace engineering at the Madras Institute of Technology."
+  },
+  {
+    "question": "What was Kalam's role at ISRO?",
+    "ground_truth": "Kalam moved to ISRO in 1969, where he served as project director for India's first Satellite Launch Vehicle, which successfully placed the Rohini satellite into near-Earth orbit in July 1980."
+  },
+  {
+    "question": "What were Project Devil and Project Valiant?",
+    "ground_truth": "Project Devil and Project Valiant were programs Kalam directed that aimed to build ballistic missiles using technology developed for the satellite launch program."
+  },
+  {
+    "question": "What was Kalam's role in India's 1998 nuclear tests?",
+    "ground_truth": "As Principal Scientific Advisor to the Government of India, Kalam played a major role in the country's 1998 nuclear weapons tests, which established India as a nuclear power."
+  },
+  {
+    "question": "What is Technology Vision 2020?",
+    "ground_truth": "Technology Vision 2020 was a long-term national plan proposed by Kalam aimed at transforming India from a developing to a developed nation within twenty years, through advances in technology, healthcare, and education."
+  },
+  {
+    "question": "When did Kalam serve as President of India?",
+    "ground_truth": "Kalam served as the 11th President of India from 25 July 2002 to 25 July 2007."
+  },
+  {
+    "question": "Why was Kalam known as the 'People's President'?",
+    "ground_truth": "He was affectionately called the People's President because of his extensive engagement with citizens and his many initiatives for public welfare throughout his presidential term."
+  },
+  {
+    "question": "What did Kalam do after his presidency ended?",
+    "ground_truth": "After leaving office, Kalam became a visiting professor at IIM Shillong, taught Aerospace Engineering at Anna University, engaged with institutions like IIM Indore and IIM Bangalore, served as Chancellor of the Indian Institute of Space Science and Technology, and in 2012 launched the 'What Can I Give?' initiative against corruption."
+  },
+  {
+    "question": "How did Kalam die?",
+    "ground_truth": "Kalam died at age 83 after suffering a cardiac arrest while delivering a lecture to students at an event at IIM Shillong on 27 July 2015."
+  },
+  {
+    "question": "What is India 2020 about?",
+    "ground_truth": "India 2020 is a book by Kalam laying out his strategy for transforming India into a leading global economy, focusing on agriculture and food security, healthcare, information and communication systems, infrastructure, electricity production, and self-reliance in advanced technology."
+  },
+  {
+    "question": "What major awards did Kalam receive?",
+    "ground_truth": "Kalam received the Padma Bhushan (1981), Padma Vibhushan (1990), Bharat Ratna (1997), the Indira Gandhi Award for National Integration (1997), the Veer Savarkar Award, the SASTRA Ramanujan Prize (2000), and the Von Braun Award (2013)."
+  },
+  {
+    "question": "What books did Kalam write?",
+    "ground_truth": "Kalam authored several books including India 2020, Ignited Minds, Mission India, The Luminous Sparks, Wings of Fire, and Guiding Souls."
+  },
+  {
+    "question": "How many honorary doctorates did Kalam receive?",
+    "ground_truth": "Kalam received honorary doctorates from roughly forty universities around the world."
+  },
+  {
+    "question": "What is the capital of France?",
+    "ground_truth": "This question is out of scope and should not be answered from this document."
+  }
+]
