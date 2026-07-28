@@ -8,7 +8,21 @@ machine, with zero API keys, zero cloud costs, and zero rate limits.
 Built to explore Retrieval-Augmented Generation (RAG) hands-on: chunking strategy, embedding-based
 retrieval, prompt design for grounded answers, and honest evaluation of where a small local model
 succeeds and where it doesn't.
+---
 
+## 📸 Demo & Screenshots
+
+### Interactive Document Q&A
+Querying local documents (`The_Missile_Man_of_India.pdf`) with grounded answers and page citations:
+
+![CLI Demo Output](./assets/demo.png)
+
+### Evaluation Pipeline
+Running the evaluation harness to test retrieval accuracy and out-of-scope refusal behavior:
+
+![Evaluation Results](./assets/evaluation.png)
+
+---
 ## Features
 
 - 🔍 **Retrieval-Augmented Generation (RAG)** — answers are grounded in your actual documents
