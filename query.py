@@ -20,9 +20,12 @@ from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+# from langchain_community.chat_models import ChatOllama
+from langchain_core.callbacks import StreamingStdOutCallbackHandler
+
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"  # local, offline
-LLM_MODEL = "qwen2:0.5b"  # local, offline, served by Ollama
+LLM_MODEL = "llama3.2:1b"  # local, offline, served by Ollama
 VECTORSTORE_DIR = "vectorstore"
 
 PROMPT = ChatPromptTemplate.from_template(
@@ -33,8 +36,8 @@ Do not make up information.
 Match the depth of your answer to what's being asked:
 - If the question mentions marks/points (e.g. "for 10 marks"), give a detailed,
   well-structured answer with definition, key points/characteristics, and examples
-  if available in the context -- written as a proper exam answer, not a one-liner.
-- If it's a short factual question, a concise answer is fine.
+- answer each question briefly with related context you find
+
 
 Context:
 {context}
@@ -63,7 +66,11 @@ def build_chain():
     )
 
     # ChatOllama talks to your local Ollama server (default: http://localhost:11434)
-    llm = ChatOllama(model=LLM_MODEL, temperature=0.2)
+    llm = ChatOllama(
+        model="llama3.2:1b",
+        temprature=0.2,
+        callbacks=[StreamingStdOutCallbackHandler()]
+    )
 
     chain = (
         {"context": retriever | format_docs_with_sources, "question": RunnablePassthrough()}
@@ -75,14 +82,9 @@ def build_chain():
 
 
 def ask(question, chain, retriever):
+    print("\n--- ANSWER ---\n")
     answer = chain.invoke(question)
-
-    print("\n--- ANSWER ---")
-    print(answer)
-
-    if "i don't know" in answer.lower() or "don't know based on" in answer.lower():
-        return
-
+    print("\n")
     sources = retriever.invoke(question)
     print("\n--- SOURCES ---")
     seen = set()

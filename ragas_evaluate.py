@@ -20,6 +20,7 @@ from ragas import evaluate, EvaluationDataset, SingleTurnSample
 from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.run_config import RunConfig
 
 from query import build_chain, EMBEDDING_MODEL
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -53,7 +54,7 @@ for case in test_cases:
 dataset = EvaluationDataset(samples=samples)
 
 # Judge also runs locally via Ollama -- no API, no quota, no cost
-judge_llm = LangchainLLMWrapper(ChatOllama(model="qwen2:0.5b", temperature=0.0))
+judge_llm = LangchainLLMWrapper(ChatOllama(model="llama3.2:1b", temperature=0.0, timeout=1200))
 judge_embeddings = LangchainEmbeddingsWrapper(HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL))
 
 print("\nRunning RAGAS evaluation locally (this may take a while on CPU)...\n")
@@ -63,6 +64,7 @@ results = evaluate(
     metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
     llm=judge_llm,
     embeddings=judge_embeddings,
+    run_config=RunConfig(max_workers=1, timeout=1200)
 )
 
 print("=" * 50)
