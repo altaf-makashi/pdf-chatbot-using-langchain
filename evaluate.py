@@ -1,77 +1,95 @@
 """
-Evaluate your RAG pipeline against a set of test questions.
+STEP 3: Percentage-based evaluation.   Usage: python evaluate.py
 
-1. Edit eval_questions.json:
-   - Add real questions you know the answer to from your PDF
-   - Set "expected_page" to the page where that answer actually lives
-   - Set "should_answer": false for questions the bot should refuse (out-of-scope)
+Reads test_questions.json and reports:
+  - Answer correctness : judge model says CORRECT vs your reference (in-scope only)
+  - Refusal accuracy   : out-of-scope questions correctly refused
+  - Retrieval hit rate : expected page found in retrieved chunks (only if expected_page is set)
+  - Overall pass rate  : correct answers + correct refusals / all questions
 
-2. Run: python evaluate.py
+Also saves evaluation_details.csv so you can read every answer yourself.
 
-It checks TWO separate things:
-  - Retrieval hit: did the expected page show up in the retrieved sources?
-  - Refusal behavior: did the bot correctly say "I don't know" for out-of-scope questions?
+Needs:  ollama pull llama3.1   (the judge; do NOT use a 1B model as judge)
 """
 
 import json
+
+import pandas as pd
+from langchain_ollama import ChatOllama
+
 from query import build_chain
 
-with open("eval_questions.json") as f:
-    test_cases = json.load(f)
+JUDGE_MODEL = "llama3.1"
+
+judge = ChatOllama(model=JUDGE_MODEL, temperature=0)
+
+JUDGE_PROMPT = """You are grading a chatbot answer against a reference answer.
+
+Question: {q}
+Reference answer: {ref}
+Chatbot answer: {ans}
+
+The chatbot answer is CORRECT only if its key facts (dates, names, places, numbers) agree with
+the reference and it contains no contradicting facts. Extra detail is fine if it does not
+contradict the reference. If it answers a different question, or says it does not know,
+it is INCORRECT.
+
+Reply with exactly one word: CORRECT or INCORRECT."""
+
+
+def is_refusal(text):
+    t = text.lower()
+    return "i don't know" in t or "don't know based on" in t
+
+
+def judge_correct(q, ref, ans):
+    out = judge.invoke(JUDGE_PROMPT.format(q=q, ref=ref, ans=ans)).content.strip().upper()
+    return out.startswith("CORRECT")
+
+
+def pct(a, b):
+    return f"{a}/{b} = {100 * a / b:.1f}%" if b else "n/a (no cases)"
+
+
+with open("test_questions.json", encoding="utf-8") as f:
+    cases = json.load(f)
 
 chain, retriever = build_chain()
+rows = []
 
-results = []
+for i, c in enumerate(cases, 1):
+    q = c["question"]
+    answer = chain.invoke(q)
+    pages = [d.metadata.get("page") for d in retriever.invoke(q)]
+    refused = is_refusal(answer)
 
-print(f"Running {len(test_cases)} test cases...\n")
-
-for i, case in enumerate(test_cases, 1):
-    question = case["question"]
-    expected_page = case.get("expected_page")
-    should_answer = case.get("should_answer", True)
-
-    answer = chain.invoke(question)
-    answer_lower = answer.lower()
-    refused = "i don't know" in answer_lower or "don't know based on" in answer_lower
-
-    retrieved_docs = retriever.invoke(question)
-    retrieved_pages = [d.metadata.get("page") for d in retrieved_docs]
-
-    if should_answer:
-        # Check 1: did it actually attempt an answer (not refuse)?
-        answered_correctly = not refused
-        # Check 2: was the right page retrieved?
-        retrieval_hit = expected_page in retrieved_pages if expected_page is not None else None
+    if c.get("should_answer", True):
+        kind = "in-scope"
+        passed = (not refused) and judge_correct(q, c["reference"], answer)
     else:
-        # For questions that SHOULD be refused, "correct" means it DID refuse
-        answered_correctly = refused
-        retrieval_hit = None
+        kind = "out-of-scope"
+        passed = refused
 
-    results.append({
-        "question": question,
-        "answer": answer,
-        "refused": refused,
-        "expected_to_refuse": not should_answer,
-        "answered_correctly": answered_correctly,
-        "retrieval_hit": retrieval_hit,
-        "retrieved_pages": retrieved_pages,
-    })
+    hit = None
+    if c.get("expected_page") is not None:
+        hit = c["expected_page"] in pages
 
-    status = "PASS" if answered_correctly and (retrieval_hit is not False) else "FAIL"
-    print(f"[{i}] {status} -- \"{question}\"")
-    print(f"    Answer: {answer[:100]}{'...' if len(answer) > 100 else ''}")
-    if expected_page is not None:
-        print(f"    Expected page {expected_page} in retrieved pages {retrieved_pages}: {retrieval_hit}")
-    print()
+    rows.append({"type": kind, "question": q, "answer": answer, "passed": passed,
+                 "retrieval_hit": hit, "retrieved_pages": pages})
+    print(f"[{i}/{len(cases)}] {'PASS' if passed else 'FAIL'} ({kind}) {q}\n    -> {answer[:150]}")
 
-# ---------- summary ----------
-total = len(results)
-passed = sum(1 for r in results if r["answered_correctly"] and r["retrieval_hit"] is not False)
-retrieval_cases = [r for r in results if r["retrieval_hit"] is not None]
-retrieval_hits = sum(1 for r in retrieval_cases if r["retrieval_hit"])
+df = pd.DataFrame(rows)
+df.to_csv("evaluation_details.csv", index=False)
 
-print("=" * 40)
-print(f"Overall: {passed}/{total} passed")
-if retrieval_cases:
-    print(f"Retrieval accuracy: {retrieval_hits}/{len(retrieval_cases)} "
-          f"({100 * retrieval_hits / len(retrieval_cases):.0f}%)")
+inscope = df[df.type == "in-scope"]
+outscope = df[df.type == "out-of-scope"]
+page_cases = df[df.retrieval_hit.notna()]
+
+print("\n" + "=" * 50)
+print("RESULTS")
+print("=" * 50)
+print(f"Answer correctness : {pct(int(inscope.passed.sum()), len(inscope))}")
+print(f"Refusal accuracy   : {pct(int(outscope.passed.sum()), len(outscope))}")
+print(f"Retrieval hit rate : {pct(int(page_cases.retrieval_hit.sum()), len(page_cases))}")
+print(f"Overall pass rate  : {pct(int(df.passed.sum()), len(df))}")
+print("\nDetails saved to evaluation_details.csv")

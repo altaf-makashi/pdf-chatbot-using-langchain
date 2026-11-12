@@ -1,0 +1,50 @@
+[
+  {
+    "question": "When and where was APJ Abdul Kalam born?",
+    "reference": "APJ Abdul Kalam was born on 15 October 1931 in Rameswaram, in the former Madras Presidency.",
+    "should_answer": true,
+    "expected_page": null
+  },
+  {
+    "question": "What did Kalam study and where?",
+    "reference": "Kalam graduated with a degree in physics from St. Joseph's College, Tiruchirappalli in 1954, then moved to Madras in 1955 to study aerospace engineering at the Madras Institute of Technology.",
+    "should_answer": true,
+    "expected_page": null
+  },
+  {
+    "question": "When did Kalam serve as President of India?",
+    "reference": "Kalam served as the 11th President of India from 25 July 2002 to 25 July 2007.",
+    "should_answer": true,
+    "expected_page": null
+  },
+  {
+    "question": "What major awards did Kalam receive?",
+    "reference": "Kalam received the Padma Bhushan (1981), Padma Vibhushan (1990), Bharat Ratna (1997), the Indira Gandhi Award for National Integration (1997), the Veer Savarkar Award, the SASTRA Ramanujan Prize (2000), and the Von Braun Award (2013).",
+    "should_answer": true,
+    "expected_page": null
+  },
+  {
+    "question": "How did Kalam die?",
+    "reference": "Kalam died at age 83 after suffering a cardiac arrest while delivering a lecture to students at an event at IIM Shillong on 27 July 2015.",
+    "should_answer": true,
+    "expected_page": null
+  },
+  {
+    "question": "What is the capital of France?",
+    "reference": "",
+    "should_answer": false,
+    "expected_page": null
+  },
+  {
+    "question": "Who is the Prime Minister of Japan?",
+    "reference": "",
+    "should_answer": false,
+    "expected_page": null
+  },
+  {
+    "question": "How do I bake a chocolate cake?",
+    "reference": "",
+    "should_answer": false,
+    "expected_page": null
+  }
+]

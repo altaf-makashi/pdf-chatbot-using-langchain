@@ -1,166 +1,297 @@
-# 📄 PDF Chatbot using RAG and LangChain
+# 📄 PDF Chatbot: Chat with Your Documents, 100% Offline
 
-A fully local, privacy-first chatbot that lets you have a real conversation with your own PDF
-documents. Ask it anything about your files, and it retrieves the exact relevant passages and
-generates a grounded, cited answer — powered entirely by open-source tools running on your own
-machine, with zero API keys, zero cloud costs, and zero rate limits.
+A small chatbot that answers questions about your own PDF files and tells you which page the answer came from. It runs entirely on your own machine (or in Google Colab): no API keys, no cloud bills, no data leaving your computer.
 
-Built to explore Retrieval-Augmented Generation (RAG) hands-on: chunking strategy, embedding-based
-retrieval, prompt design for grounded answers, and honest evaluation of where a small local model
-succeeds and where it doesn't.
----
+I built it to learn how Retrieval-Augmented Generation (RAG) really works, and to see honestly where a tiny local model does well and where it slips.
 
-## 📸 Demo & Screenshots
+## Table of contents
 
-### Interactive Document Q&A
-Querying local documents (`The_Missile_Man_of_India.pdf`) with grounded answers and page citations:
-
-![CLI Demo Output](./assets/demo.png)
-
-### Evaluation Pipeline
-Running the evaluation harness to test retrieval accuracy and out-of-scope refusal behavior:
-
-![Evaluation Results](./assets/evaluation.png)
+1. [Features](#features)
+2. [How it works](#how-it-works)
+3. [Tech stack](#tech-stack)
+4. [Project structure](#project-structure)
+5. [Quick start (local)](#quick-start-local)
+6. [Run it in Google Colab](#run-it-in-google-colab)
+7. [Configuration](#configuration)
+8. [Evaluation](#evaluation)
+9. [Results](#results)
+10. [Limitations](#limitations)
+11. [Troubleshooting](#troubleshooting)
+12. [Roadmap](#roadmap)
+13. [License](#license)
 
 ---
+
 ## Features
 
-- 🔍 **Retrieval-Augmented Generation (RAG)** — answers are grounded in your actual documents
-  instead of the model's memory, cutting down on hallucination
-- 📚 **Source citations** — every answer shows which file and page it came from, so you can verify it
-- 🎯 **MMR-based retrieval** — reduces redundant, near-duplicate context chunks compared to plain
-  similarity search
-- 🚫 **Refusal handling** — the model is explicitly instructed to say "I don't know" for
-  out-of-scope questions rather than guessing
-- 🔒 **100% offline and free** — powered by [Ollama](https://ollama.com) for generation and local
-  `sentence-transformers` embeddings; nothing ever leaves your machine
-- ✅ **Built-in evaluation** — a lightweight test harness checks retrieval accuracy and refusal
-  behavior against a real question set
+- **Grounded answers:** the model answers from your documents, not from its memory.
+- **Source citations:** every answer lists the file and page it came from, so you can verify it.
+- **Honest refusals:** if the answer isn't in your document, it replies *"I don't know based on the provided documents."* instead of guessing.
+- **MMR retrieval:** avoids returning near-duplicate chunks.
+- **Fully offline and free:** Ollama runs the language model and a local sentence-transformers model creates embeddings.
+- **Built-in evaluation:** one command gives you percentage scores and a CSV of every answer for manual review.
 
 ## How it works
 
 ```
-                    ┌──────────────┐
-   PDF / TXT   ───► │   ingest.py  │  chunk + embed (local, sentence-transformers)
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │  Chroma DB   │  persistent vector store
-                    └──────┬───────┘
-                           ▼
-   Question    ───► ┌──────────────┐      ┌───────────────┐
-                     │  Retriever   │ ───► │  Ollama (LLM) │ ───► Answer + sources
-                     │  (MMR search)│      │  local model  │
-                     └──────────────┘      └───────────────┘
+PDF / TXT  →  ingest.py  →  Chroma vector store (saved in vectorstore/)
+                                   ↓
+Your question  →  retrieve 6 most relevant chunks (MMR)  →  local LLM (Ollama)  →  answer + sources
 ```
+
+1. **Ingest** (`ingest.py`): reads every PDF/TXT in `data/`, splits it into chunks (800 characters, 150 overlap), embeds each chunk, and saves them to a local Chroma database. It rebuilds from scratch every run, so you never get duplicates.
+2. **Retrieve** (`query.py`): finds the 6 best-matching chunks for your question using MMR search (`fetch_k=15`).
+3. **Answer** (`query.py`): sends those chunks plus your question to the model with a strict prompt: answer only from the context, otherwise say "I don't know".
 
 ## Tech stack
 
 | Layer | Tool |
 |---|---|
-| Architecture | Retrieval-Augmented Generation (RAG) |
-| Orchestration | LangChain (LCEL) |
+| Orchestration | LangChain |
+| Chatbot model | Ollama, `llama3.2:1b` (swappable, e.g. `llama3.2:3b`) |
+| Judge model (evaluation only) | Ollama, `llama3.1` |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (local) |
-| Vector store | Chroma |
-| LLM | Ollama (`qwen2:0.5b`, swappable for larger models) |
-| Evaluation | Custom retrieval-accuracy + refusal-behavior test harness |
+| Vector database | Chroma |
+| Language | Python 3.10+ |
 
-## Setup
+## Project structure
 
-### 1. Install Ollama
-Download from [ollama.com/download](https://ollama.com/download), then pull a model:
-```bash
-ollama pull qwen2:0.5b
 ```
-For better answer quality on a capable machine, use a larger model instead:
-```bash
-ollama pull llama3.2:3b
+.
+├── ingest.py              # Load → chunk → embed → save to Chroma
+├── query.py               # Chatbot: prompt, retriever, terminal Q&A
+├── evaluate.py            # Percentage-based evaluation
+├── test_questions.json    # Test questions and reference answers
+├── requirements.txt       # Python dependencies
+├── data/                  # Your PDFs/TXT files (not tracked in git)
+├── vectorstore/           # Generated by ingest.py (not tracked in git)
+└── evaluation_details.csv # Generated by evaluate.py
 ```
-(update `LLM_MODEL` in `query.py` to match)
 
-### 2. Set up the Python environment
+---
+
+## Quick start (local)
+
+### 1. Install Ollama and pull the models
+
+Download Ollama from [ollama.com/download](https://ollama.com/download), then:
+
 ```bash
-git clone https://github.com/<your-username>/pdf-chatbot-using-rag-and-langchain.git
-cd pdf-chatbot-using-rag-and-langchain
+ollama pull llama3.2:1b     # the chatbot
+ollama pull llama3.1        # the judge (only needed for evaluation)
+```
+
+### 2. Install the Python packages
+
+```bash
+git clone https://github.com/altaf-makashi/pdf-chatbot-using-langchain.git
+cd pdf-chatbot-using-langchain
 python -m venv venv
-venv\Scripts\activate        # macOS/Linux: source venv/bin/activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ### 3. Add your documents
+
 ```bash
 mkdir data
-# copy your PDFs/TXT files into data/
+# copy your PDF/TXT files into data/
 ```
 
-## Usage
+### 4. Build the database
 
-**Build the vector store** (run once, or whenever documents change):
 ```bash
 python ingest.py
 ```
 
-**Resetting the vector store** (if you swap out documents in `data/` and want a
-clean rebuild instead of adding to the existing one):
-```powershell
-# Windows PowerShell
-Remove-Item -Recurse -Force vectorstore
+Run this again whenever your documents change.
 
-# Windows Command Prompt (cmd.exe)
-rmdir /s /q vectorstore
+### 5. Ask questions
 
-# macOS/Linux
-rm -rf vectorstore
-```
-Then re-run `python ingest.py`.
-
-**Ask questions via CLI:**
 ```bash
 python query.py
 ```
+
+Type `exit` to quit. Each answer is followed by its sources.
+
+---
+
+## Run it in Google Colab
+
+Use a **T4 GPU** runtime (Runtime → Change runtime type), then run these cells in order.
+
+**1. Install packages** (the last line restarts the runtime; "session crashed" is expected)
+
+```python
+!pip uninstall -y -q google-adk
+!pip install -q -U langchain langchain-community langchain-huggingface langchain-chroma \
+  langchain-ollama langchain-text-splitters chromadb sentence-transformers pypdf pandas
+import os
+os.kill(os.getpid(), 9)
+```
+
+**2. Check the imports** (do not rerun cell 1 after the restart)
+
+```python
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import ChatOllama
+import pandas as pd
+print("imports OK")
+```
+
+**3. Install Ollama and pull the models**
+
+```python
+!sudo apt-get install -y zstd
+!curl -fsSL https://ollama.com/install.sh | sh
+import subprocess, time
+subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+time.sleep(5)
+!ollama pull llama3.2:1b
+!ollama pull llama3.1
+```
+
+**4. Upload the project files and your PDF**
+
+```python
+%mkdir -p /content/pdf-chatbot/data
+%cd /content/pdf-chatbot
+from google.colab import files
+files.upload()        # ingest.py, query.py, evaluate.py, test_questions.json
+%cd data
+files.upload()        # your PDF
+%cd ..
+```
+
+**5. Build the database, then evaluate**
+
+```python
+!python ingest.py
+!python evaluate.py
+```
+
+Colab deletes everything when the runtime resets, so download `evaluation_details.csv` before closing:
+
+```python
+from google.colab import files
+files.download("evaluation_details.csv")
+```
+
+The pip "dependency conflict" warnings you may see come from other packages Colab pre-installs. They don't affect this project.
+
+---
+
+## Configuration
+
+| Setting | Where | Default |
+|---|---|---|
+| Chatbot model | `LLM_MODEL` in `query.py` | `llama3.2:1b` |
+| Temperature | `build_chain()` in `query.py` | `0` |
+| Chunks retrieved (`k`) | `build_chain()` in `query.py` | `6` |
+| MMR candidate pool (`fetch_k`) | `build_chain()` in `query.py` | `15` |
+| Chunk size / overlap | `ingest.py` | `800` / `150` |
+| Embedding model | `EMBEDDING_MODEL` in `query.py` and `ingest.py` | `all-MiniLM-L6-v2` |
+| Judge model | `JUDGE_MODEL` in `evaluate.py` | `llama3.1` |
+
+**Keep the refusal rule in the prompt.** The "I don't know" behavior comes from the prompt in `query.py`, and `evaluate.py` looks for that phrase to detect refusals. If you change the chunk size or embedding model, rerun `ingest.py`. If you change the embedding model, change it in both files.
+
+---
 
 ## Evaluation
 
 ```bash
 python evaluate.py
 ```
-Runs a set of test questions (`eval_questions.json`) against the pipeline and checks two things
-independently:
-- **Retrieval accuracy** — did the expected page actually get retrieved?
-- **Refusal accuracy** — does the bot correctly say "I don't know" for out-of-scope questions
-  instead of hallucinating?
 
-Separating these two checks makes it easier to tell *where* a failure is coming from — bad
-retrieval/chunking versus a prompt or model issue.
+It reads `test_questions.json`, runs each question through the chatbot, and reports:
 
-## Project structure
+| Metric | What it measures |
+|---|---|
+| **Answer correctness** | A judge model compares each in-scope answer to your reference answer |
+| **Refusal accuracy** | Out-of-scope questions that were correctly answered with "I don't know" |
+| **Retrieval hit rate** | Whether the expected page was retrieved (only if `expected_page` is set) |
+| **Overall pass rate** | Correct answers plus correct refusals, out of all questions |
 
+It also saves `evaluation_details.csv` with every answer, verdict and retrieved page, so you can check the results yourself instead of trusting the numbers.
+
+### Writing test questions
+
+Each entry in `test_questions.json` looks like this:
+
+```json
+{
+  "question": "When did Kalam serve as President of India?",
+  "reference": "Kalam served as the 11th President of India from 25 July 2002 to 25 July 2007.",
+  "should_answer": true,
+  "expected_page": null
+}
 ```
-.
-├── ingest.py             # Load → chunk → embed → persist
-├── query.py               # CLI Q&A interface
-├── evaluate.py            # Retrieval-accuracy + refusal-behavior evaluation
-├── eval_questions.json    # Test set for evaluate.py
-├── requirements.txt
-└── data/                  # Your source PDFs/TXT (not tracked in git)
-```
 
-## Design notes
+- Write `reference` answers from your PDF, not from a model.
+- For out-of-scope questions, set `"should_answer": false` and leave `reference` empty.
+- `expected_page` is optional. Page numbers start at **0** in the PDF loader, and `query.py` prints the index for each source.
+- Aim for 15 to 20 in-scope questions and a handful of out-of-scope ones.
 
-- **Why fully offline?** Cloud LLM free tiers (Hugging Face, Gemini, etc.) have restrictive
-  and frequently-changing quotas that made rapid iteration painful. Running locally via
-  Ollama removes that entirely, at the cost of slower inference and a smaller model.
-- **MMR retrieval** is used instead of plain similarity search to reduce redundant,
-  near-duplicate chunks in the retrieved context.
-- **Refusal handling**: the prompt explicitly instructs the model to say "I don't know"
-  for out-of-scope questions rather than hallucinate. This works reliably with larger models
-  but can still fail with very small local models (sub-1B parameters) on detail-heavy factual
-  questions — a real, observed limitation documented here rather than glossed over.
-- **Model size is a deliberate, visible tradeoff** in this project: `qwen2:0.5b` was chosen to
-  keep everything running comfortably offline on modest hardware. Swapping in a larger model
-  (e.g. `llama3.2:3b`) is a one-line change and noticeably improves answer quality and
-  faithfulness at the cost of speed and disk space.
+---
+
+## Results
+
+Tested on `The_Missile_Man_of_India.pdf` with `llama3.2:1b` as the chatbot and `llama3.1` as the judge.
+
+| Check | Result |
+|---|---|
+| Answer correctness (in-scope) | 4/5 = 80% |
+| Refusal accuracy (out-of-scope) | 3/3 = 100% |
+| **Overall pass rate** | **7/8 = 87.5%** |
+| Retrieval hit rate | not measured |
+
+**Read this before trusting the numbers:**
+
+- This is an **8-question pilot**. One answer moves the overall score by 12.5 points, so treat it as a rough indication, not a benchmark.
+- The judge was a little generous. One answer gave the birthplace but not the birth date and was still marked correct. Graded strictly, the scores are 3/5 (60%) for correctness and 6/8 (75%) overall.
+- One genuine failure: asked what Kalam studied, the bot said "mathematics", but the document says physics and aerospace engineering.
+- The PDF is only about 6 pages long, so retrieval is an easy task here.
+
+Earlier experiments with the RAGAS library used a 1B-parameter judge and produced mostly empty or broken scores, so they are not reported here.
+
+---
+
+## Limitations
+
+- **A 1B model is small.** It can get facts wrong or give incomplete answers. `llama3.2:3b` or larger helps.
+- **Retrieval isn't perfect.** If the right chunk isn't retrieved, the model can't answer correctly.
+- **The judge isn't perfect either.** Review `evaluation_details.csv` yourself.
+- **Results depend on the document.** Scores on one PDF say little about another.
+- **Scanned PDFs aren't supported.** The loader reads text only, with no OCR.
+- **Page numbers start at 0** in the loader. `query.py` prints both the index and the number your PDF viewer shows.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `Connection refused` from Ollama | Start the server with `ollama serve` (in Colab, rerun the Ollama cell after any runtime reset) |
+| "No files found in data/" | Put your PDF inside the `data/` folder, then rerun `python ingest.py` |
+| Everything answers "I don't know" | The database is empty or built from the wrong folder. Rerun `ingest.py` and check its output |
+| `ImportError` about `opentelemetry` in Colab | Restart the runtime after installing, and don't rerun the install cell |
+| `NameError: name 'files' is not defined` | Run `from google.colab import files` first |
+| Bot answers outside knowledge (e.g. "Paris") | Make sure the refusal rule is still in the prompt and `temperature=0` is spelled correctly |
+| Slow evaluation | Use a GPU runtime, or a smaller judge for quick tests (less accurate) |
+
+---
+
+## Roadmap
+
+- [ ] Expand the test set to 15 to 20 in-scope questions and rerun the evaluation
+- [ ] Tighten the judge so missing key facts count as incorrect
+- [ ] Try `llama3.2:3b` and compare the scores
+- [ ] Fill in `expected_page` to measure retrieval
+- [ ] Add a simple web interface (e.g. Streamlit)
+
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT
